@@ -11,6 +11,35 @@ import { AppState, AppStateStatus } from "react-native";
 import { Participant, ScanLog } from "@/types";
 import { useNetwork } from "./use-network";
 
+// Server response types for tRPC format
+interface ServerParticipant {
+  uuid: string;
+  name: string;
+  mobile: string | null;
+  qrToken: string;
+  createdAt: string;
+  groupName: string | null;
+  emergencyContact: string | null;
+  emergencyContactName: string | null;
+  emergencyContactRelation: string | null;
+  notes: string | null;
+  photoUri: string | null;
+  bloodGroup: string | null;
+  medicalConditions: string | null;
+  allergies: string | null;
+  medications: string | null;
+  age: number | null;
+  gender: string | null;
+}
+
+interface ServerScanLog {
+  uuid: string;
+  participantUuid: string;
+  checkpointId: number;
+  scannedAt: string;
+  deviceId: string | null;
+}
+
 // Storage keys
 const STORAGE_KEYS = {
   PARTICIPANTS: "palitana_participants",
@@ -170,11 +199,11 @@ export function useDatabaseSync(): UseDatabaseSyncReturn {
       const scanLogsJson = await scanLogsRes.json();
 
       // Parse tRPC response format
-      const serverParticipants = participantsJson.result?.data || [];
-      const serverScanLogs = scanLogsJson.result?.data || [];
+      const serverParticipants: ServerParticipant[] = participantsJson.result?.data || [];
+      const serverScanLogs: ServerScanLog[] = scanLogsJson.result?.data || [];
 
       // Convert server format to local format
-      const localParticipants: Participant[] = serverParticipants.map((p: any) => ({
+      const localParticipants: Participant[] = serverParticipants.map((p) => ({
         id: p.uuid,
         name: p.name,
         mobile: p.mobile || "",
@@ -191,10 +220,10 @@ export function useDatabaseSync(): UseDatabaseSyncReturn {
         allergies: p.allergies || undefined,
         medications: p.medications || undefined,
         age: p.age || undefined,
-        gender: p.gender || undefined,
+        gender: p.gender as Participant["gender"] || undefined,
       }));
 
-      const localScanLogs: ScanLog[] = serverScanLogs.map((s: any) => ({
+      const localScanLogs: ScanLog[] = serverScanLogs.map((s) => ({
         id: s.uuid,
         participantId: s.participantUuid,
         checkpointId: s.checkpointId,

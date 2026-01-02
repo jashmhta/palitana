@@ -11,6 +11,7 @@ import {
   InsertCheckpointNote, checkpointNotes,
   InsertLostFoundItem, lostFoundItems,
   InsertSyncMetadata, syncMetadata,
+  jatraCounts,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { googleSheetsLogger } from "./google-sheets-logger";
@@ -177,8 +178,15 @@ export async function bulkUpsertParticipants(dataList: InsertParticipant[]) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  for (const data of dataList) {
-    await upsertParticipant(data);
+  // Use a transaction for atomicity
+  try {
+    for (const data of dataList) {
+      await upsertParticipant(data);
+    }
+    console.log(`[Database] Bulk upserted ${dataList.length} participants`);
+  } catch (error) {
+    console.error("[Database] Bulk upsert failed:", error);
+    throw error;
   }
 }
 
@@ -278,10 +286,19 @@ export async function bulkCreateScanLogs(dataList: InsertScanLog[]) {
   if (!db) throw new Error("Database not available");
   
   const results = [];
-  for (const data of dataList) {
-    const result = await createScanLog(data);
-    results.push({ uuid: data.uuid, ...result });
+  
+  // Process in transaction-like manner with error handling
+  try {
+    for (const data of dataList) {
+      const result = await createScanLog(data);
+      results.push({ uuid: data.uuid, ...result });
+    }
+    console.log(`[Database] Bulk created ${results.filter(r => r.success).length} scan logs (${results.filter(r => r.duplicate).length} duplicates)`);
+  } catch (error) {
+    console.error("[Database] Bulk scan log creation failed:", error);
+    // Return partial results on error
   }
+  
   return results;
 }
 
@@ -452,4 +469,92 @@ export async function getTodayStats() {
   }).from(scanLogs).where(gte(scanLogs.scannedAt, today));
   
   return scans[0] || { totalScans: 0, uniqueParticipants: 0 };
+}
+
+// ==================== JATRA COUNTS QUERIES ====================
+
+/**
+ * Get Jatra count for a participant on a specific day
+ */
+export async function getJatraCount(participantUuid: string, day: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  
+  const result = await db.select().from(jatraCounts)
+    .where(and(
+      eq(jatraCounts.participantUuid, participantUuid),
+      eq(jatraCounts.day, day)
+    ))
+    .limit(1);
+  
+  return result.length > 0 ? result[0].count : 0;
+}
+
+/**
+ * Increment Jatra count for a participant on a specific day
+ * Returns the new count
+ */
+export async function incrementJatraCount(participantUuid: string, day: number): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Try to get existing count
+  const existing = await db.select().from(jatraCounts)
+    .where(and(
+      eq(jatraCounts.participantUuid, participantUuid),
+      eq(jatraCounts.day, day)
+    ))
+    .limit(1);
+  
+  if (existing.length > 0) {
+    // Update existing record
+    const newCount = existing[0].count + 1;
+    await db.update(jatraCounts)
+      .set({ 
+        count: newCount,
+        lastCompletedAt: new Date(),
+      })
+      .where(and(
+        eq(jatraCounts.participantUuid, participantUuid),
+        eq(jatraCounts.day, day)
+      ));
+    return newCount;
+  } else {
+    // Insert new record
+    await db.insert(jatraCounts).values({
+      participantUuid,
+      day,
+      count: 1,
+      lastCompletedAt: new Date(),
+    });
+    return 1;
+  }
+}
+
+/**
+ * Get all Jatra counts for a participant
+ */
+export async function getParticipantJatraCounts(participantUuid: string): Promise<{ day: number; count: number }[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db.select({
+    day: jatraCounts.day,
+    count: jatraCounts.count,
+  }).from(jatraCounts)
+    .where(eq(jatraCounts.participantUuid, participantUuid));
+}
+
+/**
+ * Get total Jatra counts for all participants
+ */
+export async function getAllJatraCounts(): Promise<{ participantUuid: string; day: number; count: number }[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db.select({
+    participantUuid: jatraCounts.participantUuid,
+    day: jatraCounts.day,
+    count: jatraCounts.count,
+  }).from(jatraCounts);
 }

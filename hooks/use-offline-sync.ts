@@ -15,6 +15,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, AppStateStatus, Platform } from "react-native";
 import { trpc } from "@/lib/trpc";
 import { Participant, ScanLog } from "@/types";
+import { getLocationForScan } from "./use-location";
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -103,7 +104,7 @@ export function useOfflineSync() {
   // tRPC utilities
   const utils = trpc.useUtils();
   
-  // Fetch scan logs from database with polling
+  // Fetch scan logs from database with polling and proper caching
   const { 
     data: dbScanLogs = [], 
     refetch: refetchScanLogs,
@@ -113,13 +114,16 @@ export function useOfflineSync() {
     undefined,
     {
       refetchInterval: isOnline ? SYNC_CONFIG.POLL_INTERVAL_ONLINE : false,
-      staleTime: 2000,
+      staleTime: 2000, // Consider data fresh for 2 seconds
+      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes (formerly cacheTime)
       retry: 3,
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
     }
   );
 
-  // Fetch participants from database
+  // Fetch participants from database with proper caching
   const { 
     data: dbParticipants = [], 
     refetch: refetchParticipants,
@@ -129,9 +133,12 @@ export function useOfflineSync() {
     undefined,
     {
       refetchInterval: isOnline ? SYNC_CONFIG.POLL_INTERVAL_ONLINE : false,
-      staleTime: 2000,
+      staleTime: 10000, // Participants change less often, 10 second stale time
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
       retry: 3,
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
     }
   );
 
@@ -335,7 +342,7 @@ export function useOfflineSync() {
   );
 
   /**
-   * Add a new scan (offline-first)
+   * Add a new scan (offline-first) with optional GPS capture
    */
   const addScan = useCallback(
     async (
@@ -349,14 +356,31 @@ export function useOfflineSync() {
         return { success: false, duplicate: true };
       }
 
+      // Try to get GPS location if not provided
+      let finalGpsLat = gpsLat;
+      let finalGpsLng = gpsLng;
+      
+      if (finalGpsLat === undefined || finalGpsLng === undefined) {
+        try {
+          const location = await getLocationForScan();
+          if (location) {
+            finalGpsLat = location.lat;
+            finalGpsLng = location.lng;
+          }
+        } catch (err) {
+          // GPS is optional - continue without it
+          console.warn("[OfflineSync] GPS capture failed:", err);
+        }
+      }
+
       const newScan: PendingScan = {
         id: crypto.randomUUID(),
         participantId,
         checkpointId,
         timestamp: new Date().toISOString(),
         deviceId,
-        gpsLat,
-        gpsLng,
+        gpsLat: finalGpsLat,
+        gpsLng: finalGpsLng,
         retryCount: 0,
         createdAt: new Date().toISOString(),
       };
@@ -384,8 +408,8 @@ export function useOfflineSync() {
           checkpointId: newScan.checkpointId,
           timestamp: newScan.timestamp,
           deviceId: newScan.deviceId,
-          gpsLat: newScan.gpsLat,
-          gpsLng: newScan.gpsLng,
+          gpsLat: finalGpsLat,
+          gpsLng: finalGpsLng,
           synced: false,
         },
       };
@@ -564,6 +588,8 @@ export function useOfflineSync() {
     // Actions
     addScan,
     forceSync,
+    syncPendingScans: forceSync, // Alias for backwards compatibility with docs
+    isDuplicateScan,
     findByQrToken,
     getLogsForParticipant,
     getLogsForCheckpoint,

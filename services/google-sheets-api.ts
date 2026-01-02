@@ -104,8 +104,10 @@ class GoogleSheetsAPI {
       const response = await fetch(url);
       if (!response.ok) return [];
 
-      const data = await response.json();
-      return data.sheets?.map((s: any) => s.properties.title) || [];
+      const data = await response.json() as {
+        sheets?: Array<{ properties: { title: string } }>;
+      };
+      return data.sheets?.map((s) => s.properties.title) || [];
     } catch (error) {
       console.error("[GoogleSheetsAPI] Failed to get sheet names:", error);
       return [];

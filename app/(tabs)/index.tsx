@@ -39,6 +39,15 @@ import { ThemedView } from "@/components/themed-view";
 import { useLanguage } from "@/contexts/language-context";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { DEFAULT_CHECKPOINTS } from "@/constants/checkpoints";
+import { 
+  BADGE_NUMBER_VALIDATION_MAX, 
+  QR_TOKEN_PREFIX,
+  SCAN_TIMEOUT_MS,
+  DUPLICATE_MESSAGE_DISMISS_MS,
+  SCAN_BUTTON_SIZE,
+  RECENT_SCANS_MOBILE,
+  RECENT_SCANS_DESKTOP,
+} from "@/constants/app-config";
 import { Colors, Radius, Shadows, Spacing, Typography } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useResponsive } from "@/hooks/use-responsive";
@@ -49,7 +58,6 @@ import { playSuccessSound, playErrorSound, playDuplicateSound } from "@/services
 import { calculateJatraStats, formatJatraCount } from "@/utils/jatra-calculator";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const SCAN_BUTTON_SIZE = 140;
 
 interface RecentScan {
   id: string;
@@ -117,7 +125,7 @@ export default function ScannerScreen() {
   const recentScans: RecentScan[] = useMemo(() => {
     return scanLogs
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, isDesktop ? 20 : 10)
+      .slice(0, isDesktop ? RECENT_SCANS_DESKTOP : RECENT_SCANS_MOBILE)
       .map((log) => {
         const participant = participants.find((p) => p.id === log.participantId);
         const checkpoint = DEFAULT_CHECKPOINTS.find((c) => c.id === log.checkpointId);
@@ -144,7 +152,7 @@ export default function ScannerScreen() {
       if (isProcessing) return;
       setIsProcessing(true);
 
-      // Set a timeout to prevent infinite loading (3 seconds max for instant feel)
+      // Set a timeout to prevent infinite loading
       const timeoutId = setTimeout(() => {
         setIsProcessing(false);
         setLastScanResult({
@@ -152,7 +160,7 @@ export default function ScannerScreen() {
           message: "Scan timed out. Please try again.",
         });
         setIsScannerOpen(false);
-      }, 3000);
+      }, SCAN_TIMEOUT_MS);
 
       try {
         const participant = participants.find((p) => p.qrToken === data);
@@ -185,8 +193,8 @@ export default function ScannerScreen() {
             message: `Already scanned at this checkpoint`,
             participantName: participant.name,
           });
-          // Auto-dismiss duplicate message after 1 second
-          setTimeout(() => setLastScanResult(null), 1000);
+          // Auto-dismiss duplicate message
+          setTimeout(() => setLastScanResult(null), DUPLICATE_MESSAGE_DISMISS_MS);
         } else if (result.success) {
           if (Platform.OS !== "web") {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -357,8 +365,8 @@ export default function ScannerScreen() {
     
     const badgeNum = parseInt(manualBadgeNumber.trim(), 10);
     
-    if (isNaN(badgeNum) || badgeNum < 1 || badgeNum > 999) {
-      setManualEntryError("Please enter a valid badge number (1-999)");
+    if (isNaN(badgeNum) || badgeNum < 1 || badgeNum > BADGE_NUMBER_VALIDATION_MAX) {
+      setManualEntryError(`Please enter a valid badge number (1-${BADGE_NUMBER_VALIDATION_MAX})`);
       return;
     }
     
@@ -373,7 +381,7 @@ export default function ScannerScreen() {
     
     try {
       // Find participant by badge number (QR token format: PALITANA_YATRA_{badge})
-      const qrToken = `PALITANA_YATRA_${badgeNum}`;
+      const qrToken = `${QR_TOKEN_PREFIX}${badgeNum}`;
       const participant = participants.find((p) => p.qrToken === qrToken);
       
       if (!participant) {

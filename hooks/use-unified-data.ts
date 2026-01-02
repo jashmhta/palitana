@@ -1,16 +1,25 @@
 /**
- * Unified Data Hook
- * Provides a single source of truth for participants and scan logs
- * with automatic database synchronization
+ * @deprecated Use `useOfflineSync` from '@/hooks/use-offline-sync' instead.
+ * This hook is kept for backward compatibility but will be removed in a future version.
  * 
- * This hook resolves the issue where local storage and database
- * were operating independently, causing data inconsistencies.
+ * The useOfflineSync hook provides all the same functionality plus:
+ * - Offline-first architecture with local caching
+ * - Background sync with exponential backoff
+ * - Better network resilience
+ * 
+ * Migration guide:
+ * - Replace `useUnifiedData()` with `useOfflineSync()`
+ * - `addParticipant` is now handled by the server directly
+ * - All other methods have the same signature
  */
 
 import { useCallback, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Participant, ScanLog } from "@/types";
 import { DEFAULT_CHECKPOINTS } from "@/constants/checkpoints";
+
+// Re-export from the main hook for easy migration
+export { useOfflineSync } from "./use-offline-sync";
 
 interface AddParticipantInput {
   name: string;

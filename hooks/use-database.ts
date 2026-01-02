@@ -1,5 +1,16 @@
 /**
- * Database-backed hooks using tRPC for centralized data sync
+ * @deprecated Use `useOfflineSync` from '@/hooks/use-offline-sync' instead.
+ * These hooks are kept for backward compatibility but will be removed in a future version.
+ * 
+ * The useOfflineSync hook provides all the same functionality plus:
+ * - Offline-first architecture with local caching
+ * - Background sync with exponential backoff
+ * - Better network resilience
+ * 
+ * Migration guide:
+ * - Replace `useParticipantsDB()` and `useScanLogsDB()` with `useOfflineSync()`
+ * - Access participants via `const { participants } = useOfflineSync()`
+ * - Access scanLogs via `const { scanLogs } = useOfflineSync()`
  */
 
 import { useCallback } from "react";
@@ -7,7 +18,11 @@ import { trpc } from "@/lib/trpc";
 import { Participant, ScanLog, ParticipantWithProgress } from "@/types";
 import { TOTAL_CHECKPOINTS } from "@/constants/checkpoints";
 
+// Re-export from the main hook for easy migration
+export { useOfflineSync } from "./use-offline-sync";
+
 /**
+ * @deprecated Use `useOfflineSync` instead
  * Hook for managing participants from centralized database
  */
 export function useParticipantsDB() {

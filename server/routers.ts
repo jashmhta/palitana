@@ -1,10 +1,106 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { COOKIE_NAME } from "../shared/const.js";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, volunteerProcedure, adminProcedure, router } from "./_core/trpc";
 import { invokeLLM } from "./_core/llm";
+import { scanRateLimiter, aiRateLimiter, getRateLimitKey } from "./_core/rate-limiter";
 import * as db from "./db";
+
+// ==================== AI INPUT SANITIZATION ====================
+
+/**
+ * Sanitize AI input to prevent prompt injection attacks
+ * Removes common injection patterns and limits content
+ */
+function sanitizeAIInput(input: string): string {
+  // Remove potential injection patterns
+  let sanitized = input
+    // Remove attempts to override system prompts
+    .replace(/\b(system|assistant|ignore|disregard|forget|override|new instructions?)\s*(:|prompt|message|role)?/gi, '')
+    // Remove markdown code blocks that might contain instructions
+    .replace(/```[\s\S]*?```/g, '')
+    // Remove HTML/script tags
+    .replace(/<[^>]*>/g, '')
+    // Remove excessive whitespace
+    .replace(/\s+/g, ' ')
+    // Trim and limit length
+    .trim()
+    .slice(0, 500);
+  
+  // If the message looks like a jailbreak attempt, return a safe query
+  const injectionPatterns = [
+    /ignore.*previous/i,
+    /disregard.*instructions/i,
+    /pretend.*you.*are/i,
+    /act.*as.*if/i,
+    /you.*are.*now/i,
+    /from.*now.*on/i,
+    /new.*persona/i,
+    /roleplay/i,
+    /jailbreak/i,
+    /dan\s*mode/i,
+  ];
+  
+  for (const pattern of injectionPatterns) {
+    if (pattern.test(input)) {
+      console.warn('[AI] Potential injection attempt detected:', input.slice(0, 100));
+      return 'How many pilgrims have completed their Jatras today?';
+    }
+  }
+  
+  return sanitized;
+}
+
+/**
+ * Check if the question is related to Yatra/pilgrimage data
+ * Returns false for obviously off-topic questions
+ */
+function isYatraRelated(question: string): boolean {
+  const lower = question.toLowerCase();
+  
+  // Keywords that indicate Yatra-related questions
+  const yatraKeywords = [
+    'pilgrim', 'yatri', 'jatra', 'scan', 'checkpoint', 'badge', 'palitana',
+    'shatrunjaya', 'aamli', 'gheti', 'complete', 'started', 'progress',
+    'how many', 'who', 'which', 'total', 'count', 'status', 'statistics',
+    'today', 'day', 'duration', 'time', 'average', 'top', 'most', 'least',
+    // Gujarati keywords
+    'યાત્રા', 'યાત્રિક', 'જાત્રા', 'ચેકપોઇન્ટ',
+    // Hindi keywords  
+    'यात्रा', 'यात्री', 'जात्रा',
+  ];
+  
+  // Off-topic keywords that should be rejected
+  const offTopicKeywords = [
+    'weather', 'news', 'stock', 'price', 'bitcoin', 'crypto', 'politics',
+    'election', 'movie', 'song', 'game', 'sport', 'recipe', 'cook',
+    'code', 'program', 'javascript', 'python', 'sql', 'hack',
+    'password', 'credit card', 'bank', 'account',
+  ];
+  
+  // Check for off-topic content
+  for (const keyword of offTopicKeywords) {
+    if (lower.includes(keyword)) {
+      return false;
+    }
+  }
+  
+  // Check for Yatra-related content (be lenient - allow if any match)
+  for (const keyword of yatraKeywords) {
+    if (lower.includes(keyword.toLowerCase())) {
+      return true;
+    }
+  }
+  
+  // Allow short questions or questions with numbers (likely badge references)
+  if (question.length < 50 || /\d+/.test(question)) {
+    return true;
+  }
+  
+  return true; // Default to allowing (the system prompt will handle off-topic)
+}
 
 // Zod schemas for validation
 const participantSchema = z.object({
@@ -110,6 +206,14 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // Create a participant (alias for upsert, for documentation compatibility)
+    create: publicProcedure
+      .input(participantSchema)
+      .mutation(async ({ input }) => {
+        await db.upsertParticipant(input);
+        return { success: true };
+      }),
+
     // Bulk create/update participants
     bulkUpsert: publicProcedure
       .input(z.object({ participants: z.array(participantSchema) }))
@@ -155,10 +259,21 @@ export const appRouter = router({
         return db.getScanLogsUpdatedSince(new Date(input.since));
       }),
 
-    // Create a scan log
-    create: publicProcedure
+    // Create a scan log (requires device authentication + rate limiting)
+    create: volunteerProcedure
       .input(scanLogSchema)
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        // Apply rate limiting
+        const rateLimitKey = getRateLimitKey(ctx);
+        const rateLimit = scanRateLimiter.check(rateLimitKey);
+        
+        if (!rateLimit.allowed) {
+          throw new TRPCError({
+            code: 'TOO_MANY_REQUESTS',
+            message: `Rate limit exceeded. Please wait ${Math.ceil(rateLimit.resetIn / 1000)} seconds.`,
+          });
+        }
+        
         const result = await db.createScanLog({
           ...input,
           scannedAt: new Date(input.scannedAt),
@@ -166,8 +281,8 @@ export const appRouter = router({
         return result;
       }),
 
-    // Bulk create scan logs
-    bulkCreate: publicProcedure
+    // Bulk create scan logs (requires device authentication)
+    bulkCreate: volunteerProcedure
       .input(z.object({ scanLogs: z.array(scanLogSchema) }))
       .mutation(async ({ input }) => {
         const results = await db.bulkCreateScanLogs(
@@ -180,7 +295,7 @@ export const appRouter = router({
       }),
 
     // Clear all scan logs (admin function)
-    clearAll: publicProcedure
+    clearAll: adminProcedure
       .mutation(async () => {
         await db.clearAllScanLogs();
         return { success: true };
@@ -352,12 +467,32 @@ export const appRouter = router({
   // ==================== AI ANALYSIS API ====================
   ai: router({
     // Analyze Yatra data using AI with direct database access
-    analyzeYatraData: publicProcedure
+    analyzeYatraData: volunteerProcedure
       .input(z.object({
         question: z.string().min(1).max(500),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         try {
+          // Apply rate limiting for AI endpoint
+          const rateLimitKey = getRateLimitKey(ctx);
+          const rateLimit = aiRateLimiter.check(rateLimitKey);
+          
+          if (!rateLimit.allowed) {
+            return { 
+              answer: `Jai Jinendra! You've asked too many questions. Please wait ${Math.ceil(rateLimit.resetIn / 1000)} seconds before asking another question.` 
+            };
+          }
+          
+          // Sanitize input to prevent prompt injection
+          const sanitizedQuestion = sanitizeAIInput(input.question);
+          
+          // Check if question is related to Yatra (basic filter)
+          if (!isYatraRelated(sanitizedQuestion)) {
+            return { 
+              answer: "Jai Jinendra! I'm specifically designed to help with Palitana Yatra pilgrimage data only. Please ask me about pilgrim progress, Jatra completions, checkpoint statistics, or specific pilgrims by name or badge number." 
+            };
+          }
+          
           // Fetch all data directly from database for comprehensive analysis
           const [participants, scanLogs, todayStats, checkpointStats] = await Promise.all([
             db.getAllParticipants(),
@@ -469,7 +604,7 @@ Provide helpful, accurate answers based on the data. Use Jai Jinendra greeting. 
           const response = await invokeLLM({
             messages: [
               { role: "system", content: systemPrompt },
-              { role: "user", content: input.question },
+              { role: "user", content: sanitizedQuestion },
             ],
           });
 

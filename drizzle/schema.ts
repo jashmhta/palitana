@@ -189,3 +189,23 @@ export const syncMetadata = mysqlTable("sync_metadata", {
 
 export type SyncMetadata = typeof syncMetadata.$inferSelect;
 export type InsertSyncMetadata = typeof syncMetadata.$inferInsert;
+
+/**
+ * Jatra completion counts - persists Jatra counts per participant per day
+ * This ensures counts survive server restarts
+ */
+export const jatraCounts = mysqlTable("jatra_counts", {
+  id: int("id").autoincrement().primaryKey(),
+  participantUuid: varchar("participantUuid", { length: 36 }).notNull(),
+  day: int("day").notNull(),
+  count: int("count").notNull().default(0),
+  lastCompletedAt: timestamp("lastCompletedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  // Unique constraint on participant + day
+  participantDayIdx: index("idx_jatra_counts_participant_day").on(table.participantUuid, table.day),
+}));
+
+export type JatraCount = typeof jatraCounts.$inferSelect;
+export type InsertJatraCount = typeof jatraCounts.$inferInsert;

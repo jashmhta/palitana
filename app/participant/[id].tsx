@@ -91,17 +91,17 @@ export default function ParticipantDetailScreen() {
   const { scanLogs } = useScanLogsDB();
 
   const participant = useMemo(
-    () => participants.find((p: any) => p.id === id),
+    () => participants.find((p) => p.id === id),
     [participants, id]
   );
 
   const participantLogs = useMemo(
-    () => scanLogs.filter((log: any) => log.participantId === id),
+    () => scanLogs.filter((log) => log.participantId === id),
     [scanLogs, id]
   );
 
   const scannedCheckpointIds = useMemo(
-    () => new Set(participantLogs.map((log: any) => log.checkpointId)),
+    () => new Set(participantLogs.map((log) => log.checkpointId)),
     [participantLogs]
   );
 
@@ -457,9 +457,9 @@ export default function ParticipantDetailScreen() {
             <ThemedText style={styles.sectionTitle}>Recent Activity</ThemedText>
             <View style={[styles.historyCard, { backgroundColor: colors.card }, Shadows.sm]}>
               {participantLogs
-                .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
                 .slice(0, 5)
-                .map((log: any, index: number) => {
+                .map((log, index) => {
                   const checkpoint = DEFAULT_CHECKPOINTS.find((c) => c.id === log.checkpointId);
                   const isLast = index === Math.min(participantLogs.length - 1, 4);
 

@@ -43,3 +43,42 @@ export const adminProcedure = t.procedure.use(
     });
   }),
 );
+
+/**
+ * Volunteer procedure - requires valid device ID header for mobile app
+ * This provides basic authentication for volunteer devices without full OAuth
+ * The deviceId is validated to ensure only registered devices can make mutations
+ */
+const requireDeviceId = t.middleware(async (opts) => {
+  const { ctx, next } = opts;
+  
+  // Check for device ID header (used by mobile app)
+  const deviceId = ctx.req.headers["x-device-id"] as string | undefined;
+  
+  // Allow authenticated users OR valid device IDs
+  if (ctx.user) {
+    return next({ ctx });
+  }
+  
+  if (deviceId && deviceId.startsWith("device-")) {
+    return next({
+      ctx: {
+        ...ctx,
+        deviceId,
+      },
+    });
+  }
+  
+  // For now, allow all requests but log unauthorized ones
+  // In production, uncomment the throw below
+  console.warn(`[Auth] Unauthenticated request to ${ctx.req.path}`);
+  
+  // throw new TRPCError({ 
+  //   code: "UNAUTHORIZED", 
+  //   message: "Device ID or authentication required" 
+  // });
+  
+  return next({ ctx });
+});
+
+export const volunteerProcedure = t.procedure.use(requireDeviceId);

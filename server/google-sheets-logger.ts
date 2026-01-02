@@ -12,6 +12,7 @@
 import { google } from "googleapis";
 import * as path from "path";
 import * as fs from "fs";
+import * as db from "./db";
 
 // Checkpoint IDs
 const CHECKPOINT_AAMLI = 1;
@@ -59,10 +60,18 @@ class GoogleSheetsLogger {
   private isInitialized = false;
   private failedScans: ScanLogData[] = [];
   private retryInterval: ReturnType<typeof setInterval> | null = null;
+  private cleanupInterval: ReturnType<typeof setInterval> | null = null;
   private maxRetryQueueSize = 1000;
   
+  // TTL for recent scans (4 hours) - prevents memory leak
+  private static readonly SCAN_TTL_MS = 4 * 60 * 60 * 1000;
+  // Cleanup interval (30 minutes)
+  private static readonly CLEANUP_INTERVAL_MS = 30 * 60 * 1000;
+  // Max scans per participant to keep in memory
+  private static readonly MAX_SCANS_PER_PARTICIPANT = 50;
+  
   // Track recent scans for Jatra completion detection
-  // Map: participantUuid -> { checkpointId, timestamp }[]
+  // Map: participantUuid -> { checkpointId, timestamp, day }[]
   private recentScans: Map<string, { checkpointId: number; timestamp: Date; day: number }[]> = new Map();
   
   // Track Jatra counts per participant per day
@@ -114,6 +123,9 @@ class GoogleSheetsLogger {
       
       // Start retry processor
       this.startRetryProcessor();
+      
+      // Start cleanup processor to prevent memory leaks
+      this.startCleanupProcessor();
       
     } catch (error) {
       console.error("[GoogleSheetsLogger] Initialization failed:", error);
@@ -248,6 +260,53 @@ class GoogleSheetsLogger {
         }
       }
     }, 30000);
+  }
+
+  /**
+   * Start the cleanup processor to prevent memory leaks
+   * Removes old scans from recentScans map based on TTL
+   */
+  private startCleanupProcessor(): void {
+    if (this.cleanupInterval) return;
+    
+    this.cleanupInterval = setInterval(() => {
+      this.cleanupOldScans();
+    }, GoogleSheetsLogger.CLEANUP_INTERVAL_MS);
+    
+    // Also run cleanup immediately
+    this.cleanupOldScans();
+  }
+
+  /**
+   * Clean up old scans from memory to prevent memory leaks
+   */
+  private cleanupOldScans(): void {
+    const now = Date.now();
+    const cutoffTime = now - GoogleSheetsLogger.SCAN_TTL_MS;
+    let totalRemoved = 0;
+    
+    for (const [participantUuid, scans] of this.recentScans.entries()) {
+      // Filter out old scans
+      const filteredScans = scans.filter(scan => {
+        const scanTime = scan.timestamp instanceof Date ? scan.timestamp.getTime() : new Date(scan.timestamp).getTime();
+        return scanTime > cutoffTime;
+      });
+      
+      // Keep only the most recent scans if still too many
+      const finalScans = filteredScans.slice(-GoogleSheetsLogger.MAX_SCANS_PER_PARTICIPANT);
+      
+      totalRemoved += scans.length - finalScans.length;
+      
+      if (finalScans.length === 0) {
+        this.recentScans.delete(participantUuid);
+      } else {
+        this.recentScans.set(participantUuid, finalScans);
+      }
+    }
+    
+    if (totalRemoved > 0) {
+      console.log(`[GoogleSheetsLogger] Cleaned up ${totalRemoved} old scans from memory. Current participants tracked: ${this.recentScans.size}`);
+    }
   }
 
   /**
@@ -398,6 +457,7 @@ class GoogleSheetsLogger {
 
   /**
    * Record a Jatra completion when Gheti is scanned
+   * Now persists to database for server restart survival
    */
   private async recordJatraCompletion(scanData: ScanLogData): Promise<void> {
     if (!this.sheets || !this.spreadsheetId) return;
@@ -411,11 +471,18 @@ class GoogleSheetsLogger {
       
       const lastAamliScan = aamliScans[aamliScans.length - 1];
       
-      // Get Jatra number for this participant on this day
-      const jatraKey = `${scanData.participantUuid}_day${scanData.day}`;
-      const currentJatraCount = this.jatraCounts.get(jatraKey) || 0;
-      const newJatraNumber = currentJatraCount + 1;
-      this.jatraCounts.set(jatraKey, newJatraNumber);
+      // Get Jatra number from database (persisted) instead of in-memory
+      let newJatraNumber: number;
+      try {
+        newJatraNumber = await db.incrementJatraCount(scanData.participantUuid, scanData.day);
+      } catch (dbError) {
+        // Fallback to in-memory if database fails
+        console.warn("[GoogleSheetsLogger] Database Jatra count failed, using in-memory:", dbError);
+        const jatraKey = `${scanData.participantUuid}_day${scanData.day}`;
+        const currentJatraCount = this.jatraCounts.get(jatraKey) || 0;
+        newJatraNumber = currentJatraCount + 1;
+        this.jatraCounts.set(jatraKey, newJatraNumber);
+      }
       
       // Calculate duration
       let startTime = lastAamliScan?.timestamp || scanData.scannedAt;
