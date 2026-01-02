@@ -1,0 +1,90 @@
+{
+  "query": "SELECT id, name FROM participants LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 17oTeKzz8Z3aRwi.8209f0bd258e --database eTkTs4BzjSr4MnNYk55mHc --execute SELECT id, name FROM participants LIMIT 20;",
+  "rows": [
+    {
+      "id": "419",
+      "name": "Aachal Vinod Bhandari"
+    },
+    {
+      "id": "420",
+      "name": "Aanchal jain"
+    },
+    {
+      "id": "421",
+      "name": "Aangi"
+    },
+    {
+      "id": "422",
+      "name": "Aarna"
+    },
+    {
+      "id": "423",
+      "name": "Aarushi Bhandari"
+    },
+    {
+      "id": "424",
+      "name": "Aashvi chhajed"
+    },
+    {
+      "id": "425",
+      "name": "Aayushi Jain"
+    },
+    {
+      "id": "426",
+      "name": "Aayushi shah"
+    },
+    {
+      "id": "427",
+      "name": "Abhilasha Jain"
+    },
+    {
+      "id": "428",
+      "name": "Additi Solanki"
+    },
+    {
+      "id": "429",
+      "name": "Aditi"
+    },
+    {
+      "id": "430",
+      "name": "Aditi Bhandari"
+    },
+    {
+      "id": "431",
+      "name": "Aditi jain"
+    },
+    {
+      "id": "432",
+      "name": "Aishvi jain"
+    },
+    {
+      "id": "433",
+      "name": "Akshara Jain"
+    },
+    {
+      "id": "434",
+      "name": "Aksharachopra"
+    },
+    {
+      "id": "435",
+      "name": "Amisha Saklecha"
+    },
+    {
+      "id": "436",
+      "name": "Amita Mangesh Bora"
+    },
+    {
+      "id": "437",
+      "name": "Aneriben Manoj Kumar Shah"
+    },
+    {
+      "id": "438",
+      "name": "Anuja Romil Shah"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\n419\tAachal Vinod Bhandari\n420\tAanchal jain\n421\tAangi\n422\tAarna\n423\tAarushi Bhandari\n424\tAashvi chhajed\n425\tAayushi Jain\n426\tAayushi shah\n427\tAbhilasha Jain\n428\tAdditi Solanki\n429\tAditi\n430\tAditi Bhandari\n431\tAditi jain\n432\tAishvi jain\n433\tAkshara Jain\n434\tAksharachopra\n435\tAmisha Saklecha\n436\tAmita Mangesh Bora\n437\tAneriben Manoj Kumar Shah\n438\tAnuja Romil Shah\n",
+  "stderr": "",
+  "execution_time_ms": 1519
+}

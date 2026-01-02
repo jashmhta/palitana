@@ -1,0 +1,8 @@
+{
+  "query": "SELECT id, name, badge_number FROM participants WHERE badge_number > 417 OR name LIKE '%Test%' ORDER BY badge_number DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 17oTeKzz8Z3aRwi.8209f0bd258e --database eTkTs4BzjSr4MnNYk55mHc --execute SELECT id, name, badge_number FROM participants WHERE badge_number > 417 OR name LIKE '%Test%' ORDER BY badge_number DESC LIMIT 10;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'badge_number' in 'where clause'"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "query": "DELETE FROM participants WHERE qr_token LIKE 'E2E-TEST%' OR qr_token LIKE 'PYT-TEST%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 17oTeKzz8Z3aRwi.8209f0bd258e --database eTkTs4BzjSr4MnNYk55mHc --execute DELETE FROM participants WHERE qr_token LIKE 'E2E-TEST%' OR qr_token LIKE 'PYT-TEST%';",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'qr_token' in 'where clause'"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "query": "SELECT uuid, name, qrToken, mobile FROM participants LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 17oTeKzz8Z3aRwi.8209f0bd258e --database eTkTs4BzjSr4MnNYk55mHc --execute SELECT uuid, name, qrToken, mobile FROM participants LIMIT 5;",
+  "rows": [
+    {
+      "uuid": "913ef31f-baf8-5836-b23b-30831f2784ef",
+      "name": "Aachal Vinod Bhandari",
+      "qrToken": "PALITANA_YATRA_1",
+      "mobile": "7720064326"
+    },
+    {
+      "uuid": "757f2b4f-8be0-5b34-a217-4f5f8d0d5370",
+      "name": "Aanchal jain",
+      "qrToken": "PALITANA_YATRA_2",
+      "mobile": "9826990266"
+    },
+    {
+      "uuid": "cdd406c2-157f-5edd-b2bc-a1cd5f4f5249",
+      "name": "Aangi",
+      "qrToken": "PALITANA_YATRA_3",
+      "mobile": "9825529797"
+    },
+    {
+      "uuid": "c961a5ac-841b-53e6-a428-1e3b1797c8f1",
+      "name": "Aarna",
+      "qrToken": "PALITANA_YATRA_4",
+      "mobile": "9904082060"
+    },
+    {
+      "uuid": "6b258e77-dab3-5827-9338-ead4c856afd5",
+      "name": "Aarushi Bhandari",
+      "qrToken": "PALITANA_YATRA_5",
+      "mobile": "9827637699"
+    }
+  ],
+  "messages": [],
+  "stdout": "uuid\tname\tqrToken\tmobile\n913ef31f-baf8-5836-b23b-30831f2784ef\tAachal Vinod Bhandari\tPALITANA_YATRA_1\t7720064326\n757f2b4f-8be0-5b34-a217-4f5f8d0d5370\tAanchal jain\tPALITANA_YATRA_2\t9826990266\ncdd406c2-157f-5edd-b2bc-a1cd5f4f5249\tAangi\tPALITANA_YATRA_3\t9825529797\nc961a5ac-841b-53e6-a428-1e3b1797c8f1\tAarna\tPALITANA_YATRA_4\t9904082060\n6b258e77-dab3-5827-9338-ead4c856afd5\tAarushi Bhandari\tPALITANA_YATRA_5\t9827637699\n",
+  "stderr": "",
+  "execution_time_ms": 1558
+}

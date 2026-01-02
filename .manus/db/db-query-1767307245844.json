@@ -1,0 +1,50 @@
+{
+  "query": "SELECT qrToken, name FROM participants ORDER BY qrToken LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 17oTeKzz8Z3aRwi.8209f0bd258e --database eTkTs4BzjSr4MnNYk55mHc --execute SELECT qrToken, name FROM participants ORDER BY qrToken LIMIT 10;",
+  "rows": [
+    {
+      "qrToken": "PALITANA_YATRA_1",
+      "name": "Aachal Vinod Bhandari"
+    },
+    {
+      "qrToken": "PALITANA_YATRA_10",
+      "name": "Additi Solanki"
+    },
+    {
+      "qrToken": "PALITANA_YATRA_100",
+      "name": "Jain Mehal Ritesh"
+    },
+    {
+      "qrToken": "PALITANA_YATRA_101",
+      "name": "Jain Nikita manish"
+    },
+    {
+      "qrToken": "PALITANA_YATRA_102",
+      "name": "Jaini Shah"
+    },
+    {
+      "qrToken": "PALITANA_YATRA_103",
+      "name": "Jayna Jain"
+    },
+    {
+      "qrToken": "PALITANA_YATRA_104",
+      "name": "Jayshree jain"
+    },
+    {
+      "qrToken": "PALITANA_YATRA_105",
+      "name": "Jeenal Naresh Gudhka"
+    },
+    {
+      "qrToken": "PALITANA_YATRA_106",
+      "name": "Jeenali Bhandari"
+    },
+    {
+      "qrToken": "PALITANA_YATRA_107",
+      "name": "Jheel Dilip Jain"
+    }
+  ],
+  "messages": [],
+  "stdout": "qrToken\tname\nPALITANA_YATRA_1\tAachal Vinod Bhandari\nPALITANA_YATRA_10\tAdditi Solanki\nPALITANA_YATRA_100\tJain Mehal Ritesh\nPALITANA_YATRA_101\tJain Nikita manish\nPALITANA_YATRA_102\tJaini Shah\nPALITANA_YATRA_103\tJayna Jain\nPALITANA_YATRA_104\tJayshree jain\nPALITANA_YATRA_105\tJeenal Naresh Gudhka\nPALITANA_YATRA_106\tJeenali Bhandari\nPALITANA_YATRA_107\tJheel Dilip Jain\n",
+  "stderr": "",
+  "execution_time_ms": 1516
+}

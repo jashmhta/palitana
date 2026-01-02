@@ -1,0 +1,96 @@
+{
+  "summary": {
+    "excel_count": 413,
+    "database_count": 417,
+    "matching": 405,
+    "discrepancies": 8,
+    "missing_in_db": 0,
+    "missing_in_excel": 4
+  },
+  "discrepancies": [
+    {
+      "badge": 5,
+      "name": "Aarushi Bhandari",
+      "issues": [
+        "Age: Excel=16 vs DB=21",
+        "Emergency: Excel='9827637699' vs DB='7898954083'"
+      ]
+    },
+    {
+      "badge": 116,
+      "name": "Kanisha Alpesh shah",
+      "issues": [
+        "Age: Excel=16 vs DB=None"
+      ]
+    },
+    {
+      "badge": 122,
+      "name": "Khushbhu jain",
+      "issues": [
+        "Blood: Excel='O +ve' vs DB=None",
+        "Emergency: Excel='7389761730' vs DB='+91 73897 61730'"
+      ]
+    },
+    {
+      "badge": 124,
+      "name": "KHUSHBU KAKRECHA",
+      "issues": [
+        "Emergency: Excel='8905492464' vs DB='89054 92464'"
+      ]
+    },
+    {
+      "badge": 238,
+      "name": "Vinita Ben",
+      "issues": [
+        "Name: Excel='Vinita Ben' vs DB='Ruchika Jain'",
+        "Emergency: Excel='9589434417' vs DB='9589851870'"
+      ]
+    },
+    {
+      "badge": 320,
+      "name": "Viral naitik bavisi",
+      "issues": [
+        "Blood: Excel='B +ve' vs DB=None",
+        "Emergency: Excel='9714091200' vs DB='9978126500'"
+      ]
+    },
+    {
+      "badge": 324,
+      "name": "Vrushti Gaurav Shah",
+      "issues": [
+        "Name: Excel='Vrushti Gaurav Shah' vs DB='Vishwa Rupeshbhai Shroff'",
+        "Age: Excel=20 vs DB=23",
+        "Blood: Excel='O +ve' vs DB='B +ve'",
+        "Emergency: Excel='9819528088' vs DB='9712913230'"
+      ]
+    },
+    {
+      "badge": 384,
+      "name": "Sakshi Chhajed",
+      "issues": [
+        "Age: Excel=26 vs DB=None",
+        "Blood: Excel='B +ve' vs DB=None",
+        "Emergency: Excel='8989451245' vs DB='9111347172'"
+      ]
+    }
+  ],
+  "missing_in_db": [],
+  "missing_in_excel": [
+    {
+      "badge": 39,
+      "name": "CHAITRALI YUVRAJ MEHTA"
+    },
+    {
+      "badge": 229,
+      "name": "Rashi Rupesh Shroff"
+    },
+    {
+      "badge": 244,
+      "name": "Saloni Chandravat"
+    },
+    {
+      "badge": 325,
+      "name": "Vrushti Gaurav Shah"
+    }
+  ]
+}
